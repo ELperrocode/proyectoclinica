@@ -55,12 +55,6 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->navigationItems([
-                NavigationItem::make('Mi panel')
-                    ->url('/dashboard', shouldOpenInNewTab: false)
-                    ->icon('heroicon-o-presentation-chart-line')
-                    ->sort(3),
-
-                // ...
             ])
             ->plugins([
                 HexaLite::make()
@@ -68,11 +62,11 @@ class AdminPanelProvider extends PanelProvider
             ->plugin(
                 FilamentFullCalendarPlugin::make()
                     ->schedulerLicenseKey("")
-                    ->selectable()
+                    ->selectable(true)
                     ->editable(true)
                     ->timezone(config('app.timezone'))
                     ->locale(config('app.locale'))
-                    ->plugins(['dayGrid', 'timeGrid'])
+                    ->plugins(['dayGrid', 'timeGrid', 'interaction'])
                     ->config([])
             )
 

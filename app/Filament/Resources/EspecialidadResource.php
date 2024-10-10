@@ -14,6 +14,8 @@ use Filament\Resources\Resource;
 class EspecialidadResource extends Resource
 {
     protected static ?string $model = Especialidad::class;
+    protected static ?string $navigationLabel = 'Especialidades';
+    protected static ?string $navigationGroup = 'Gestión Médica';
 
     protected static ?string $navigationIcon = 'heroicon-o-shield-check';
 

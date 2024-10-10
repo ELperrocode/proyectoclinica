@@ -19,7 +19,7 @@ use Filament\Notifications\Notification;
 class CitaResource extends Resource
 {
     protected static ?string $model = Cita::class;
-
+    protected static ?string $navigationGroup = 'Gestión Pacientes';
     protected static ?string $navigationIcon = 'heroicon-o-calendar';
 
     public static function form(Form $form): Form

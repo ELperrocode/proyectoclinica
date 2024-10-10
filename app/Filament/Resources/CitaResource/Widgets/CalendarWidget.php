@@ -28,15 +28,12 @@ class CalendarWidget extends FullCalendarWidget
             ->where('fecha', '<=', $fetchInfo['end'])
             ->get()
             ->map(
-                fn (Cita $event) => EventData::make()
+                fn(Cita $event) => EventData::make()
                     ->id($event->id)
-                    ->title($event->paciente->nombre) 
+                    ->title($event->paciente->nombre)
                     ->start($event->fecha . 'T' . $event->hora_inicio)
                     ->end($event->fecha . 'T' . $event->hora_fin)
-                    ->url(
-                        url: CitaResource::getUrl(name: 'edit', parameters: ['record' => $event]),
-                        shouldOpenUrlInNewTab: false
-                    )
+                    
             )
             ->toArray();
     }
@@ -64,59 +61,11 @@ class CalendarWidget extends FullCalendarWidget
                 ->schema([
                     Forms\Components\TimePicker::make('hora_inicio')
                         ->seconds(false)
-                        ->required()
-                        ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                            $doctorId = $get('doctor_id');
-                            $fecha = $get('fecha');
-                            $horaFin = $get('hora_fin');
-
-                            if ($doctorId && $fecha && $horaFin) {
-                                $exists = Cita::where('doctor_id', $doctorId)
-                                    ->where('fecha', $fecha)
-                                    ->where(function ($query) use ($state, $horaFin) {
-                                        $query->whereBetween('hora_inicio', [$state, $horaFin])
-                                              ->orWhereBetween('hora_fin', [$state, $horaFin]);
-                                    })
-                                    ->exists();
-
-                                if ($exists) {
-                                    $set('hora_inicio', null);
-                                    Notification::make()
-                                        ->title('Conflicto de Horario')
-                                        ->body('Ya existe una cita con el mismo doctor en el mismo horario.')
-                                        ->danger()
-                                        ->send();
-                                }
-                            }
-                        }),
+                        ->required(),
 
                     Forms\Components\TimePicker::make('hora_fin')
                         ->seconds(false)
-                        ->required()
-                        ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                            $doctorId = $get('doctor_id');
-                            $fecha = $get('fecha');
-                            $horaInicio = $get('hora_inicio');
-
-                            if ($doctorId && $fecha && $horaInicio) {
-                                $exists = Cita::where('doctor_id', $doctorId)
-                                    ->where('fecha', $fecha)
-                                    ->where(function ($query) use ($horaInicio, $state) {
-                                        $query->whereBetween('hora_inicio', [$horaInicio, $state])
-                                              ->orWhereBetween('hora_fin', [$horaInicio, $state]);
-                                    })
-                                    ->exists();
-
-                                if ($exists) {
-                                    $set('hora_fin', null);
-                                    Notification::make()
-                                        ->title('Conflicto de Horario')
-                                        ->body('Ya existe una cita con el mismo doctor en el mismo horario.')
-                                        ->danger()
-                                        ->send();
-                                }
-                            }
-                        }),
+                        ->required(),
                 ]),
         ];
     }
@@ -131,8 +80,8 @@ class CalendarWidget extends FullCalendarWidget
                         'doctor_id' => $record->doctor_id,
                         'motivo_id' => $record->motivo_id,
                         'fecha' => $arguments['event']['start'] ?? $record->fecha,
-                        'hora_inicio' => $arguments['event']['start'] ? Carbon::parse($arguments['event']['start'])->format('H:i') : $record->hora_inicio,
-                        'hora_fin' => $arguments['event']['end'] ? Carbon::parse($arguments['event']['end'])->format('H:i') : $record->hora_fin,
+                        'hora_inicio' => $arguments['event']['start'] ??  $record->hora_inicio,
+                        'hora_fin' => $arguments['event']['end'] ?? $record->hora_fin,
                     ]);
                 }),
             DeleteAction::make(),
@@ -154,4 +103,16 @@ class CalendarWidget extends FullCalendarWidget
                 }),
         ];
     }
+
+    public function eventDidMount(): string
+    {
+        return <<<JS
+        function({ event, timeText, isStart, isEnd, isMirror, isPast, isFuture, isToday, el, view }){
+            el.setAttribute("x-tooltip", "tooltip");
+            el.setAttribute("x-data", "{ tooltip: '"+event.title+"' }");
+        }
+    JS;
+    }
+
+    
 }

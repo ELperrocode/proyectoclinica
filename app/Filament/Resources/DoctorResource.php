@@ -13,8 +13,9 @@ use Filament\Forms;
 class DoctorResource extends Resource
 {
     protected static ?string $model = Doctor::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+    protected static ?string $navigationLabel = 'Doctores';
+    protected static ?string $navigationIcon = 'heroicon-o-plus-circle';
+    protected static ?string $navigationGroup = 'Gestión Médica';
 
     public static function form(Form $form): Form
     {
