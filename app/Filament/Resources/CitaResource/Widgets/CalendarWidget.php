@@ -33,7 +33,7 @@ class CalendarWidget extends FullCalendarWidget
                     ->title($event->paciente->nombre)
                     ->start($event->fecha . 'T' . $event->hora_inicio)
                     ->end($event->fecha . 'T' . $event->hora_fin)
-                    
+
             )
             ->toArray();
     }
@@ -42,18 +42,22 @@ class CalendarWidget extends FullCalendarWidget
     {
         return [
             Forms\Components\Select::make('paciente_id')
+                ->label('Paciente')
                 ->options(Paciente::all()->pluck('nombre', 'id'))
                 ->required(),
 
             Forms\Components\Select::make('doctor_id')
+                ->label('Doctor')
                 ->options(Doctor::all()->pluck('nombre', 'id'))
                 ->required(),
 
             Forms\Components\Select::make('motivo_id')
+                ->label('Motivo')
                 ->options(Servicio::all()->pluck('nombre', 'id'))
                 ->required(),
 
             Forms\Components\DatePicker::make('fecha')
+                ->label('Fecha')
                 ->required()
                 ->minDate(now()->toDateString()),
 
@@ -113,6 +117,4 @@ class CalendarWidget extends FullCalendarWidget
         }
     JS;
     }
-
-    
 }

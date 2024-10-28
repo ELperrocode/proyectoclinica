@@ -20,6 +20,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Hexters\HexaLite\HexaLite;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin as Shield;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -57,7 +58,7 @@ class AdminPanelProvider extends PanelProvider
             ->navigationItems([
             ])
             ->plugins([
-                HexaLite::make()
+                Shield::make()
             ])
             ->plugin(
                 FilamentFullCalendarPlugin::make()
