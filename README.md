@@ -37,6 +37,6 @@ php artisan migrate
 
 ### 2. Crea la cuenta de administrador de FilamentPHP
 ```bash
-php artisan hexa:account --create
+php artisan make:filament-user
 ```
 
