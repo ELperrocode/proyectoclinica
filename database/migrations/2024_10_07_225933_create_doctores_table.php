@@ -12,9 +12,13 @@ class CreateDoctoresTable extends Migration
             $table->id();
             $table->string('nombre');
             $table->string('apellido');
-            $table->string('especialidad_id')->constrained('especialidades')->onDelete('cascade');
+            $table->foreignId('especialidad_id')->constrained('especialidades')->onDelete('cascade');
             $table->string('telefono');
             $table->string('email')->unique();
+            $table->string('cip')->unique();
+            $table->string('numero_junta_tecnica')->unique();
+            $table->string('direccion');
+            $table->string('sexo');
             $table->timestamps();
         });
     }

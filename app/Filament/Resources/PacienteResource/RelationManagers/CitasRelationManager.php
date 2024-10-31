@@ -1,32 +1,30 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Filament\Resources\PacienteResource\RelationManagers;
 
-use App\Filament\Resources\CitaResource\Pages;
 use App\Models\Cita;
 use App\Models\Doctor;
 use App\Models\Paciente;
 use App\Models\Servicio;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\Resource;
-use Filament\Tables;
-use Filament\Tables\Table;
-use Filament\Tables\Filters\SelectFilter;
-use Illuminate\Database\Eloquent\Builder;
 use Carbon\Carbon;
+use Filament\Forms;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Section;
-use Filament\Tables\Columns\ColorColumn;
+use Filament\Forms\Form;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Tables;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Barryvdh\DomPDF\Facade\Pdf;
 
-class CitaResource extends Resource
+class CitasRelationManager extends RelationManager
 {
-    protected static ?string $model = Cita::class;
-    protected static ?string $navigationGroup = 'Gestión Pacientes';
-    protected static ?string $navigationIcon = 'heroicon-o-calendar';
+    protected static string $relationship = 'citas';
 
-    public static function form(Form $form): Form
+    public function form(Form $form): Form
     {
         return $form
             ->schema([
@@ -117,27 +115,28 @@ class CitaResource extends Resource
             ]);
     }
 
-    public static function table(Table $table): Table
+
+    public function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('paciente_info')
-                    ->label('Paciente')
-                    ->getStateUsing(function (Cita $record) {
-                        return "{$record->paciente->cip} {$record->paciente->nombre} {$record->paciente->apellido}";
-                    }),
-                Tables\Columns\TextColumn::make('doctor_info')
-                    ->label('Doctor')
-                    ->getStateUsing(function (Cita $record) {
-                        return "{$record->doctor->nombre} {$record->doctor->apellido} ({$record->doctor->especialidad->nombre})";
-                    }),
+                    Tables\Columns\TextColumn::make('paciente_info')
+                        ->label('Paciente')
+                        ->getStateUsing(function (Cita $record) {
+                            return "{$record->paciente->cip} {$record->paciente->nombre} {$record->paciente->apellido}";
+                        }),
+                        Tables\Columns\TextColumn::make('doctor_info')
+                        ->label('Doctor')
+                        ->getStateUsing(function (Cita $record) {
+                            return "{$record->doctor->nombre} {$record->doctor->apellido} ({$record->doctor->especialidad->nombre})";
+                        }),
                 Tables\Columns\TextColumn::make('fecha')->label('Fecha'),
                 Tables\Columns\TextColumn::make('hora_inicio')->label('Hora de Inicio'),
                 Tables\Columns\TextColumn::make('hora_fin')->label('Hora de Fin'),
                 Tables\Columns\TextColumn::make('motivo.nombre')->label('Motivo'),
                 Tables\Columns\TextColumn::make('status')->label('Estado')
                     ->badge()
-                    ->color(function (string $state): string {
+                    ->color( function (string $state):string {
                         if ($state === 'pendiente') {
                             return 'warning';
                         } elseif ($state === 'confirmada') {
@@ -177,28 +176,4 @@ class CitaResource extends Resource
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
-    }
-
-    public static function getPages(): array
-    {
-        return [
-            'index' => Pages\ListCitas::route('/'),
-            'create' => Pages\CreateCita::route('/create'),
-            'edit' => Pages\EditCita::route('/{record}/edit'),
-            'view' => Pages\ViewEvent::route('/{record}'),
-        ];
-    }
-
-    //public static function getWidgets(): array
-    //{
-    // return [
-    //   CalendarWidget::class,
-    //];
-    //}
 }

@@ -20,4 +20,10 @@ class Servicio extends Model
     {
         return $this->belongsTo(Especialidad::class);
     }
+
+
+    public function doctores()
+    {
+        return $this->hasMany(Doctor::class, 'especialidad_id', 'especialidad_id');
+    }
 }

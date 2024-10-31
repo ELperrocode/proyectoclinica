@@ -21,14 +21,25 @@ class DoctorResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('nombre')->required(),
-                Forms\Components\TextInput::make('apellido')->required(),
-                Forms\Components\Select::make('especialidad_id')
-                ->label('Especialidad')
-                ->relationship('especialidad', 'nombre')
-                ->required(),
-                Forms\Components\TextInput::make('telefono')->required(),
-                Forms\Components\TextInput::make('email')->email()->required(),
+                Forms\Components\Grid::make(2)
+                    ->schema([
+                        Forms\Components\TextInput::make('nombre')->required(),
+                        Forms\Components\TextInput::make('apellido')->required(),
+                        Forms\Components\TextInput::make('cip')->required(),
+                        Forms\Components\TextInput::make('numero_junta_tecnica')->label('Número de Junta Técnica')->required(),
+                        Forms\Components\Select::make('sexo')
+                            ->options([
+                                'masculino' => 'Masculino',
+                                'femenino' => 'Femenino',
+                            ])
+                            ->required(),
+                        Forms\Components\TextInput::make('telefono')->required(),
+                        Forms\Components\TextInput::make('email')->email()->required(),
+                        Forms\Components\TextInput::make('direccion')->required(),
+                        Forms\Components\Select::make('especialidad_id')
+                            ->relationship('especialidad', 'nombre')
+                            ->required(),
+                    ]),
             ]);
     }
 
@@ -38,9 +49,13 @@ class DoctorResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('nombre'),
                 Tables\Columns\TextColumn::make('apellido'),
-                Tables\Columns\TextColumn::make('especialidad.nombre')->label('Especialidad'),
+                Tables\Columns\TextColumn::make('cip'),
+                Tables\Columns\TextColumn::make('numero_junta_tecnica')->label('Número de Junta Técnica'),
+                Tables\Columns\TextColumn::make('sexo'),
                 Tables\Columns\TextColumn::make('telefono'),
                 Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('direccion'),
+                Tables\Columns\TextColumn::make('especialidad.nombre')->label('Especialidad'),
             ])
             ->filters([
                 //

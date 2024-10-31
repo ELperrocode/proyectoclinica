@@ -30,7 +30,7 @@ class CalendarWidget extends FullCalendarWidget
             ->map(
                 fn(Cita $event) => EventData::make()
                     ->id($event->id)
-                    ->title($event->paciente->nombre)
+                    ->title($event->paciente->nombre." ".$event->paciente->apellido." - ".$event->motivo->nombre)
                     ->start($event->fecha . 'T' . $event->hora_inicio)
                     ->end($event->fecha . 'T' . $event->hora_fin)
                     ->backgroundColor($this->getEventColor($event->status))
@@ -41,10 +41,10 @@ class CalendarWidget extends FullCalendarWidget
     protected function getEventColor(string $status): string
     {
         return match ($status) {
-            'pendiente' => 'blue',
-            'confirmada' => 'green',
+            'pendiente' => 'warning',
+            'confirmada' => 'primary',
             'cancelada' => 'red',
-            'completada' => 'gray',
+            'completada' => 'success',
             default => 'blue',
         };
     }
@@ -54,7 +54,9 @@ class CalendarWidget extends FullCalendarWidget
         return [
             Forms\Components\Select::make('paciente_id')
                 ->label('Paciente')
-                ->options(Paciente::all()->pluck('nombre', 'id'))
+                ->options(Paciente::all()->mapWithKeys(function ($paciente) {
+                    return [$paciente->id => $paciente->nombre . ' ' . $paciente->apellido . ' (CIP: ' . $paciente->cip . ')'];
+                }))
                 ->required(),
 
             Forms\Components\Select::make('motivo_id')
@@ -70,9 +72,12 @@ class CalendarWidget extends FullCalendarWidget
 
             Forms\Components\Select::make('doctor_id')
                 ->label('Doctor')
-                ->relationship('doctor', 'nombre', function ($query, $get) {
+                ->options(function (callable $get) {
                     $especialidadId = $get('especialidad_id');
-                    return $query->where('especialidad_id', $especialidadId);
+                    return Doctor::where('especialidad_id', $especialidadId)->get()
+                        ->mapWithKeys(function ($doctor) {
+                            return [$doctor->id => $doctor->nombre . ' ' . $doctor->apellido . ' (CIP: ' . $doctor->cip . ')'];
+                        });
                 })
                 ->required(),
 
@@ -93,6 +98,7 @@ class CalendarWidget extends FullCalendarWidget
                 ]),
         ];
     }
+
 
     protected function modalActions(): array
     {
