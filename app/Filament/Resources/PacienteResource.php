@@ -23,9 +23,47 @@ class PacienteResource extends Resource
                 Forms\Components\TextInput::make('nombre')->required(),
                 Forms\Components\TextInput::make('apellido')->required(),
                 Forms\Components\DatePicker::make('fecha_nacimiento')->required(),
+                Forms\Components\Select::make('sexo')
+                    ->options([
+                        'masculino' => 'Masculino',
+                        'femenino' => 'Femenino',
+                    ])
+                    ->required(),
+                Forms\Components\TextInput::make('nacionalidad')->required(),
+                Forms\Components\TextInput::make('cip')->label('CIP')->required(),
                 Forms\Components\TextInput::make('direccion')->required(),
                 Forms\Components\TextInput::make('telefono')->required(),
                 Forms\Components\TextInput::make('email')->email()->required(),
+                Forms\Components\Select::make('grupo_sanguineo')
+                    ->options([
+                        'A+' => 'A+',
+                        'A-' => 'A-',
+                        'B+' => 'B+',
+                        'B-' => 'B-',
+                        'AB+' => 'AB+',
+                        'AB-' => 'AB-',
+                        'O+' => 'O+',
+                        'O-' => 'O-',
+                    ])
+                   ,
+                Forms\Components\Textarea::make('alergias'),
+                Forms\Components\Textarea::make('condiciones_medicas'),
+                Forms\Components\Textarea::make('medicamentos'),
+                Forms\Components\TextInput::make('nombre_aseguradora'),
+                Forms\Components\TextInput::make('numero_poliza'),
+                Forms\Components\DatePicker::make('fecha_vencimiento_poliza'),
+                Forms\Components\TextInput::make('contacto_emergencia_nombre'),
+                Forms\Components\TextInput::make('contacto_emergencia_relacion'),
+                Forms\Components\TextInput::make('contacto_emergencia_telefono'),
+                Forms\Components\TextInput::make('ocupacion'),
+                Forms\Components\Select::make('estado_civil')
+                    ->options([
+                        'soltero' => 'Soltero',
+                        'casado' => 'Casado',
+                        'divorciado' => 'Divorciado',
+                        'viudo' => 'Viudo',
+                    ])
+                   ,
             ]);
     }
 
@@ -36,9 +74,24 @@ class PacienteResource extends Resource
                 Tables\Columns\TextColumn::make('nombre'),
                 Tables\Columns\TextColumn::make('apellido'),
                 Tables\Columns\TextColumn::make('fecha_nacimiento'),
+                Tables\Columns\TextColumn::make('sexo'),
+                Tables\Columns\TextColumn::make('nacionalidad'),
+                Tables\Columns\TextColumn::make('cip')->label('CIP'),
                 Tables\Columns\TextColumn::make('direccion'),
                 Tables\Columns\TextColumn::make('telefono'),
                 Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('grupo_sanguineo'),
+                Tables\Columns\TextColumn::make('alergias'),
+                Tables\Columns\TextColumn::make('condiciones_medicas'),
+                Tables\Columns\TextColumn::make('medicamentos'),
+                Tables\Columns\TextColumn::make('nombre_aseguradora'),
+                Tables\Columns\TextColumn::make('numero_poliza'),
+                Tables\Columns\TextColumn::make('fecha_vencimiento_poliza'),
+                Tables\Columns\TextColumn::make('contacto_emergencia_nombre'),
+                Tables\Columns\TextColumn::make('contacto_emergencia_relacion'),
+                Tables\Columns\TextColumn::make('contacto_emergencia_telefono'),
+                Tables\Columns\TextColumn::make('ocupacion'),
+                Tables\Columns\TextColumn::make('estado_civil'),
             ])
             ->filters([
                 //

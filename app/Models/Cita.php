@@ -38,6 +38,6 @@ class Cita extends Model
     }
     public function especialidad()
     {
-        return $this->belongsTo(Especialidad::class, 'especialidad_id');
+        return $this->hasOneThrough(Especialidad::class, Servicio::class, 'id', 'id', 'motivo_id', 'especialidad_id');
     }
 }
