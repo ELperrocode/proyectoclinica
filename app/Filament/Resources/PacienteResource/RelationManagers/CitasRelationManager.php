@@ -120,23 +120,23 @@ class CitasRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                    Tables\Columns\TextColumn::make('paciente_info')
-                        ->label('Paciente')
-                        ->getStateUsing(function (Cita $record) {
-                            return "{$record->paciente->cip} {$record->paciente->nombre} {$record->paciente->apellido}";
-                        }),
-                        Tables\Columns\TextColumn::make('doctor_info')
-                        ->label('Doctor')
-                        ->getStateUsing(function (Cita $record) {
-                            return "{$record->doctor->nombre} {$record->doctor->apellido} ({$record->doctor->especialidad->nombre})";
-                        }),
+                Tables\Columns\TextColumn::make('paciente_info')
+                    ->label('Paciente')
+                    ->getStateUsing(function (Cita $record) {
+                        return "{$record->paciente->cip} {$record->paciente->nombre} {$record->paciente->apellido}";
+                    }),
+                Tables\Columns\TextColumn::make('doctor_info')
+                    ->label('Doctor')
+                    ->getStateUsing(function (Cita $record) {
+                        return "{$record->doctor->nombre} {$record->doctor->apellido} ({$record->doctor->especialidad->nombre})";
+                    }),
                 Tables\Columns\TextColumn::make('fecha')->label('Fecha'),
                 Tables\Columns\TextColumn::make('hora_inicio')->label('Hora de Inicio'),
                 Tables\Columns\TextColumn::make('hora_fin')->label('Hora de Fin'),
                 Tables\Columns\TextColumn::make('motivo.nombre')->label('Motivo'),
                 Tables\Columns\TextColumn::make('status')->label('Estado')
                     ->badge()
-                    ->color( function (string $state):string {
+                    ->color(function (string $state): string {
                         if ($state === 'pendiente') {
                             return 'warning';
                         } elseif ($state === 'confirmada') {
@@ -171,9 +171,27 @@ class CitasRelationManager extends RelationManager
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('downloadRecetaPDF')
+                ->label('Descargar Receta PDF')
+                ->url(fn (Cita $record) => route('citas.downloadRecetaPDF', $record->id))
+
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
             ]);
     }
+
+
+public function downloadRecetaPDF($recordId)
+{
+    $cita = Cita::findOrFail($recordId);
+    $receta = $cita->recetas;
+    $paciente = $cita->paciente;
+    $doctor = $cita->doctor;
+    $fecha = now()->format('d/m/Y');
+
+    $pdf = Pdf::loadView('receta', compact('receta', 'paciente', 'doctor', 'fecha'));
+
+    return $pdf->download('receta.pdf');
+}
 }
