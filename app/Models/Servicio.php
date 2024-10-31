@@ -10,6 +10,14 @@ class Servicio extends Model
     use HasFactory;
 
     protected $fillable = [
-        'nombre', 'descripcion'
+        'nombre',
+        'descripcion',
+        'especialidad_id',
+        'precio',
     ];
+
+    public function especialidad()
+    {
+        return $this->belongsTo(Especialidad::class);
+    }
 }

@@ -33,9 +33,20 @@ class CalendarWidget extends FullCalendarWidget
                     ->title($event->paciente->nombre)
                     ->start($event->fecha . 'T' . $event->hora_inicio)
                     ->end($event->fecha . 'T' . $event->hora_fin)
+                    ->backgroundColor($this->getEventColor($event->status))
 
             )
             ->toArray();
+    }
+    protected function getEventColor(string $status): string
+    {
+        return match ($status) {
+            'pendiente' => 'blue',
+            'confirmada' => 'green',
+            'cancelada' => 'red',
+            'completada' => 'gray',
+            default => 'blue',
+        };
     }
 
     public function getFormSchema(): array

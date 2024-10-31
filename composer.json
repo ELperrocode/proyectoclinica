@@ -6,7 +6,8 @@
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "bezhansalleh/filament-shield": "*",
+        "barryvdh/laravel-dompdf": "^3.0",
+        "bezhansalleh/filament-shield": "^3.2",
         "blade-ui-kit/blade-icons": "^1.7",
         "filament/filament": "^3.2",
         "laravel/framework": "^11.9",

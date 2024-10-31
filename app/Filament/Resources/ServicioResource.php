@@ -23,6 +23,13 @@ class ServicioResource extends Resource
             ->schema([
                 Forms\Components\TextInput::make('nombre')->required(),
                 Forms\Components\Textarea::make('descripcion')->nullable(),
+                Forms\Components\Select::make('especialidad_id')
+                    ->relationship('especialidad', 'nombre')
+                    ->required(),
+                Forms\Components\TextInput::make('precio')
+                    ->numeric()
+                    ->required()
+                    ->label('Precio'),
             ]);
     }
 
@@ -32,6 +39,8 @@ class ServicioResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('nombre'),
                 Tables\Columns\TextColumn::make('descripcion'),
+                Tables\Columns\TextColumn::make('especialidad.nombre')->label('Especialidad'),
+                Tables\Columns\TextColumn::make('precio')->label('Precio')->money('USD', true),
             ])
             ->filters([
                 //
