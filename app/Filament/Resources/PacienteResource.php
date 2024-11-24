@@ -107,12 +107,12 @@ class PacienteResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nombre'),
-                Tables\Columns\TextColumn::make('apellido'),
+                Tables\Columns\TextColumn::make('nombre')->searchable(),
+                Tables\Columns\TextColumn::make('apellido')->searchable(),
                 Tables\Columns\TextColumn::make('fecha_nacimiento'),
                 Tables\Columns\TextColumn::make('sexo'),
                 Tables\Columns\TextColumn::make('nacionalidad'),
-                Tables\Columns\TextColumn::make('cip')->label('CIP'),
+                Tables\Columns\TextColumn::make('cip')->label('CIP')->searchable(),
                 Tables\Columns\TextColumn::make('direccion'),
                 Tables\Columns\TextColumn::make('telefono'),
                 Tables\Columns\TextColumn::make('email'),
