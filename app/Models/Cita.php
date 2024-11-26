@@ -145,4 +145,10 @@ class Cita extends Model
         $this->validarDiaDisponible($data['doctor_id'], $data['fecha']);
         $this->validarHorarioDisponible($data['doctor_id'], $data['fecha'], $data['hora_inicio'], $data['hora_fin']);
     }
+    public function isValid($data)
+    {
+        $this->validarDiaDisponible($data['doctor_id'], $data['fecha']);
+        $this->validarHorarioDisponible($data['doctor_id'], $data['fecha'], $data['hora_inicio'], $data['hora_fin']);
+        return true;
+    }
 }

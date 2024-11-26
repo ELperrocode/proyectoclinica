@@ -18,6 +18,8 @@ use Livewire\Attributes\Reactive;
 use Saade\FilamentFullCalendar\Actions\CreateAction;
 use Saade\FilamentFullCalendar\Actions\EditAction;
 use Saade\FilamentFullCalendar\Actions\DeleteAction;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\AppointmentCreated;
 
 class CalendarWidget extends FullCalendarWidget
 {
@@ -121,6 +123,7 @@ class CalendarWidget extends FullCalendarWidget
                                     ->body('La hora de finalización no puede ser menor que la hora de inicio.')
                                     ->send();
                             }
+                            $this->validateAvailability($get, $set);
                         }),
 
                     Forms\Components\TimePicker::make('hora_fin')
@@ -139,6 +142,7 @@ class CalendarWidget extends FullCalendarWidget
                                     ->body('La hora de finalización no puede ser menor que la hora de inicio.')
                                     ->send();
                             }
+                            $this->validateAvailability($get, $set);
                         }),
                 ]),
 
@@ -146,10 +150,6 @@ class CalendarWidget extends FullCalendarWidget
                 ->label('Error')
                 ->visible(fn(callable $get) => $get('error') !== null)
                 ->content(fn(callable $get) => $get('error')),
-            Forms\Components\Placeholder::make('log_message')
-                ->label('Log Message')
-                ->visible(fn(callable $get) => $get('log_message') !== null)
-                ->content(fn(callable $get) => $get('log_message')),
         ];
     }
 
@@ -189,13 +189,32 @@ class CalendarWidget extends FullCalendarWidget
                     $cita = new Cita();
 
                     if ($cita->isValid($data)) {
-                        // Crear la cita si no hay conflictos
-                        Cita::create($data);
 
+                        // Crear la cita
+                        $appointment = Cita::create($data);
+
+                        // Enviar notificación de éxito
                         Notification::make()
-                            ->title('Cita creada exitosamente')
+                            ->title('Cita Creada')
+                            ->body('La cita ha sido creada exitosamente para ' . $appointment->paciente->nombre . ' ' . $appointment->paciente->apellido)
                             ->success()
                             ->send();
+
+                        // Enviar correo de confirmación
+                        try {
+                            Mail::to($appointment->paciente->email)->send(new AppointmentCreated($appointment));
+                            Notification::make()
+                                ->title('Correo Enviado')
+                                ->body('El correo de confirmación ha sido enviado a ' . $appointment->paciente->email)
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                            Notification::make()
+                                ->title('Error al Enviar Correo')
+                                ->body('Hubo un error al enviar el correo de confirmación: ' . $e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
                     } else {
                         Notification::make()
                             ->title('Error al crear la cita')
