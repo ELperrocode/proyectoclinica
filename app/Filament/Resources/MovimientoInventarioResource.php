@@ -40,7 +40,7 @@ class MovimientoInventarioResource extends Resource
                                 ->danger()
                                 ->body('No hay suficiente stock para realizar esta salida.')
                                 ->send();
-                            $set('cantidad', null); // Resetea el campo cantidad para evitar el envío del formulario
+                            $set('cantidad', null); 
                         }
                     }),
                 Forms\Components\Textarea::make('motivo')->nullable(),

@@ -26,4 +26,9 @@ class Servicio extends Model
     {
         return $this->hasMany(Doctor::class, 'especialidad_id', 'especialidad_id');
     }
+
+    public function detalleFactura()
+    {
+        return $this->morphOne(DetalleFactura::class, 'detallable');
+    }
 }

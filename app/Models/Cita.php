@@ -48,7 +48,10 @@ class Cita extends Model
     {
         return $this->hasOneThrough(Especialidad::class, Servicio::class, 'id', 'id', 'motivo_id', 'especialidad_id');
     }
-
+    public function detalleFactura()
+    {
+        return $this->morphOne(DetalleFactura::class, 'detallable');
+    }
     /**
      * Valida si el doctor está disponible el día seleccionado.
      */
