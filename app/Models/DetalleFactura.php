@@ -64,6 +64,18 @@ class DetalleFactura extends Model
                 ]);
             }
         });
+
+        static::created(function ($detalle) {
+            $detalle->factura->touch(); 
+        });
+
+        static::updated(function ($detalle) {
+            $detalle->factura->touch();
+        });
+
+        static::deleted(function ($detalle) {
+            $detalle->factura->touch();
+        });
     }
 
 }

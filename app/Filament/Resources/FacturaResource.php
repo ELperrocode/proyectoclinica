@@ -3,7 +3,6 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\FacturaResource\Pages;
-use App\Filament\Resources\FacturaResource\RelationManagers;
 use App\Models\Factura;
 use App\Models\Servicio;
 use App\Models\Cita;
@@ -13,173 +12,230 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Notifications\Notification;
 
 class FacturaResource extends Resource
 {
     protected static ?string $model = Factura::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-credit-card';
     protected static ?string $navigationGroup = 'Facturación';
+    public static function getNavigationBadge(): ?string
+    {
+        $pendientes = Factura::where('estado', 'pendiente')->count();
+        return $pendientes > 0 ? (string) $pendientes : null;
+    }
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'warning';
+    }
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('cliente')->required(),
-                Forms\Components\Repeater::make('detalles')
-                    ->relationship()
-                    ->schema([
+        return $form->schema([
+            Forms\Components\Section::make('Información General')
+                ->columns(2)
+                ->schema([
+                    Forms\Components\TextInput::make('cliente')
+                        ->required()
+                        ->label('Cliente'),
 
-                        Forms\Components\Select::make('detallable_type')
+                    Forms\Components\Select::make('estado')
                         ->options([
-                            Cita::class => 'Cita',
-                            Servicio::class => 'Servicio',
-                            Insumo::class => 'Insumo',
+                            'pendiente' => 'Pendiente',
+                            'pagada' => 'Pagada',
+                            'cancelada' => 'Cancelada',
                         ])
-                        ->required()
+                        ->default('pendiente')
+                        ->label('Estado')
+                        ->required(),
+
+                    Forms\Components\Checkbox::make('es_jubilado')
+                        ->label('¿Es Jubilado?')
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                            $set('detallable_id', null); // Resetear el ID seleccionable
-                            if ($state === Cita::class || $state === Servicio::class) {
-                                $set('cantidad', 1); // Asignar cantidad implícita 1
-                            }
-                            self::recalculateTotal($set, $get); // Recalcular el total
+                            self::recalculateTotal($set, $get);
                         }),
+                ]),
 
-                        Forms\Components\Select::make('detallable_id')
-                        ->options(function (callable $get) {
-                            $type = $get('detallable_type');
-                            if ($type === Cita::class) {
-                                return Cita::where('status', 'confirmada')
-                                    ->get()
-                                    ->mapWithKeys(fn($cita) => [$cita->id => $cita->paciente->nombre . ' - ' . $cita->motivo->nombre]);
-                            } elseif ($type === Servicio::class) {
-                                return Servicio::all()->pluck('nombre', 'id');
-                            } elseif ($type === Insumo::class) {
-                                return Insumo::all()->pluck('nombre', 'id');
-                            }
-                            return [];
-                        })
-                        ->required()
-                        ->reactive()
+            Forms\Components\Section::make('Items')
+                ->columns(1)
+                ->schema([
+                    Forms\Components\Repeater::make('detalles')->label('Detalles')
+                        ->relationship()
+                        ->columns(3) // Configuración de columnas para reducir altura
+                        ->schema([
+                            Forms\Components\Grid::make(3)->schema([
+                                Forms\Components\Select::make('detallable_type')
+                                    ->options([
+                                        Cita::class => 'Cita',
+                                        Servicio::class => 'Servicio',
+                                        Insumo::class => 'Insumo',
+                                    ])
+                                    ->required()
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        $set('detallable_id', null);
+                                        if ($state === Cita::class || $state === Servicio::class) {
+                                            $set('cantidad', 1);
+                                        }
+                                        self::recalculateTotal($set, $get);
+                                    }),
+
+                                Forms\Components\Select::make('detallable_id')
+                                    ->options(function (callable $get) {
+                                        $type = $get('detallable_type');
+                                        if ($type === Cita::class) {
+                                            return Cita::where('status', 'confirmada')
+                                                ->get()
+                                                ->mapWithKeys(fn($cita) => [$cita->id => $cita->paciente->nombre . ' - ' . $cita->motivo->nombre]);
+                                        } elseif ($type === Servicio::class) {
+                                            return Servicio::all()->pluck('nombre', 'id');
+                                        } elseif ($type === Insumo::class) {
+                                            return Insumo::all()->pluck('nombre', 'id');
+                                        }
+                                        return [];
+                                    })
+                                    ->required()
+                                    ->label('Detalle')
+                                    ->reactive()
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        $type = $get('detallable_type');
+                                        if ($type && $state) {
+                                            $item = $type::find($state);
+                                            if ($item) {
+                                                $set('precio', match ($type) {
+                                                    Cita::class => $item->motivo->precio,
+                                                    Servicio::class => $item->precio,
+                                                    Insumo::class => $item->precio_unitario,
+                                                    default => 0,
+                                                });
+                                            }
+                                        }
+                                        self::recalculateTotal($set, $get);
+                                    }),
+
+                                Forms\Components\TextInput::make('precio')
+                                    ->numeric()
+                                    ->required()
+                                    ->readOnly(true)
+                                    ->label('Precio')
+                                    ->reactive()
+                                    ->afterStateUpdated(fn($state, callable $set, callable $get) => self::recalculateTotal($set, $get)),
+
+                                Forms\Components\TextInput::make('cantidad')
+                                    ->numeric()
+                                    ->label('Cantidad')
+                                    ->default(fn(callable $get) => $get('detallable_type') === Insumo::class ? 1 : null)
+                                    ->required(fn(callable $get) => $get('detallable_type') === Insumo::class)
+                                    ->visible(fn(callable $get) => $get('detallable_type') === Insumo::class)
+                                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                        $type = $get('detallable_type');
+                                        $id = $get('detallable_id');
+                                        if ($type === Insumo::class && $id) {
+                                            $insumo = Insumo::find($id);
+                                            if ($insumo && $state > $insumo->cantidad) {
+                                                Notification::make()
+                                                    ->title('Stock insuficiente')
+                                                    ->danger()
+                                                    ->body('No hay suficiente stock para facturar este insumo.')
+                                                    ->send();
+                                                $set('cantidad', null);
+                                            }
+                                        }
+                                        self::recalculateTotal($set, $get);
+                                    }),
+                            ]),
+                        ])
+                        ->columns(4)
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                            $type = $get('detallable_type');
-                            if ($type && $state) {
-                                $item = $type::find($state);
-                                if ($item) {
-                                    $set('precio', match ($type) {
-                                        Cita::class => $item->motivo->precio,
-                                        Servicio::class => $item->precio,
-                                        Insumo::class => $item->precio_unitario,
-                                        default => 0,
-                                    });
-                                }
-                            }
-                            self::recalculateTotal($set, $get); // Recalcular el total
+                            self::recalculateTotal($set, $get);
                         }),
+                ]),
 
-
-
-                        Forms\Components\TextInput::make('precio')
-                            ->numeric()
-                            ->required()
-                            ->reactive()
-                            ->afterStateUpdated(fn($state, callable $set, callable $get) => self::recalculateTotal($set, $get)),
-                            Forms\Components\TextInput::make('cantidad')
-                            ->numeric()
-                            ->default(fn (callable $get) => $get('detallable_type') === Insumo::class ? 1 : null) // Por defecto 1 solo si es Insumo
-                            ->required(fn (callable $get) => $get('detallable_type') === Insumo::class) // Requerido solo para Insumos
-                            ->visible(fn (callable $get) => $get('detallable_type') === Insumo::class) // Visible solo para Insumos
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                                $type = $get('detallable_type');
-                                $id = $get('detallable_id');
-
-                                // Validación específica para Insumos
-                                if ($type === Insumo::class && $id) {
-                                    $insumo = Insumo::find($id);
-                                    if ($insumo && $state > $insumo->cantidad) {
-                                        Notification::make()
-                                            ->title('Stock insuficiente')
-                                            ->danger()
-                                            ->body('No hay suficiente stock para facturar este insumo.')
-                                            ->send();
-                                        $set('cantidad', null); // Restablecer la cantidad si supera el stock
-                                    }
-                                }
-
-                                // Asignar cantidad predeterminada para Citas o Servicios
-                                if (in_array($type, [Cita::class, Servicio::class])) {
-                                    $set('cantidad', 1); // Cantidad fija
-                                }
-
-                                // Recalcular el total
-                                self::recalculateTotal($set, $get);
-                            }),
-
-                    ])
-                    ->columns(3)
-                    ->afterStateUpdated(function ($state, callable $set, callable $get) {
-                        self::recalculateTotal($set, $get);
-                    }),
-
-                Forms\Components\TextInput::make('total')
-                    ->numeric()
-                    ->disabled()
-                    ->default(0)
-                    ->reactive(),
-                Forms\Components\Select::make('estado')
-                    ->options([
-                        'pendiente' => 'Pendiente',
-                        'pagada' => 'Pagada',
-                        'cancelada' => 'Cancelada',
-                    ])
-                    ->default('pendiente')
-                    ->required(),
-            ]);
+            Forms\Components\Section::make('Resumen')
+                ->columns(1)
+                ->schema([
+                    Forms\Components\TextInput::make('total')
+                        ->numeric()
+                        ->disabled()
+                        ->default(0)
+                        ->label('Total')
+                        ->reactive()
+                        ->formatStateUsing(fn($state) => number_format($state, 2)),
+                ]),
+        ]);
     }
 
     private static function recalculateTotal(callable $set, callable $get)
     {
         $detalles = $get('detalles') ?? [];
-        $total = collect($detalles)->sum(function ($detalle) {
+        $total = 0;
+
+        foreach ($detalles as $detalle) {
+            $type = $detalle['detallable_type'] ?? null;
+            $id = $detalle['detallable_id'] ?? null;
+            $cantidad = $detalle['cantidad'] ?? 1;
             $precio = $detalle['precio'] ?? 0;
-            $cantidad = $detalle['cantidad'] ?? 1; // Si cantidad es null, se asume 1
-            return (float) $precio * (int) $cantidad;
-        });
+
+            if ($type === Insumo::class && $id) {
+                $insumo = Insumo::find($id);
+                if ($insumo && $cantidad > $insumo->cantidad) {
+                    Notification::make()
+                        ->title('Stock insuficiente')
+                        ->danger()
+                        ->body('No hay suficiente stock para facturar el insumo "' . $insumo->nombre . '".')
+                        ->send();
+
+                    continue;
+                }
+            }
+
+            $total += $precio * $cantidad;
+        }
+
+        if ($get('es_jubilado')) {
+            $total *= 0.85;
+        }
 
         $set('total', $total);
     }
 
 
 
-
-
-    public static function table(Table $table): Table
+    public static function table(Tables\Table $table): Tables\Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('cliente')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('total')
-                    ->numeric()
-                    ->sortable(),
-                Tables\Columns\TextColumn::make('estado')
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
+                Tables\Columns\TextColumn::make('id')->searchable(),
+                Tables\Columns\TextColumn::make('cliente')->searchable()->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('total')->numeric()->sortable()->formatStateUsing(fn($state) => number_format($state, 2)),
+                Tables\Columns\TextColumn::make('estado')->searchable()->label('Estado')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
+                    ->badge()
+                    ->color(function (string $state): string {
+                        if ($state === 'pendiente') {
+                            return 'warning';
+                        } elseif ($state === 'pagada') {
+                            return 'success';
+                        } elseif ($state === 'cancelada') {
+                            return 'danger';
+                        }
+                        return 'default';
+                    }),
+                Tables\Columns\TextColumn::make('created_at')->label("Fecha")->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: false),
+                Tables\Columns\TextColumn::make('updated_at')->dateTime()->sortable()->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('detalles')
+                    ->label('Detalles')
+                    ->searchable()
+                    ->formatStateUsing(function ($record) {
+                        return $record->detalles->map(function ($detalle) {
+                            $tipo = class_basename($detalle->detallable_type);
+                            $nombre = $detalle->detallable->nombre ?? $detalle->detallable->motivo->nombre ?? 'N/A';
+                            $cantidad = $detalle->cantidad ?? 1;
+                            $lote = $detalle->detallable_type === Insumo::class ? ' - Lote: ' . ($detalle->detallable->lote ?? 'N/A') : '';
+                            return "{$tipo}: {$nombre} (Cantidad: {$cantidad}{$lote})";
+                        })->join(', ');
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -194,9 +250,7 @@ class FacturaResource extends Resource
 
     public static function getRelations(): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 
     public static function getPages(): array

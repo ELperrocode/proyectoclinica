@@ -15,18 +15,28 @@ class Factura extends Model
     {
         return $this->hasMany(DetalleFactura::class);
     }
+
+
     public function getTotalAttribute()
     {
-        return $this->detalles->sum('total');
+        return $this->detalles->sum(function ($detalle) {
+            return ($detalle->precio ?? 0) * ($detalle->cantidad ?? 1);
+        });
     }
+
+ 
     protected static function booted()
     {
         static::creating(function ($factura) {
-            $factura->total = $factura->detalles->sum('total');
+            $factura->total = $factura->detalles->sum(function ($detalle) {
+                return ($detalle->precio ?? 0) * ($detalle->cantidad ?? 1);
+            });
         });
 
         static::updating(function ($factura) {
-            $factura->total = $factura->detalles->sum('total');
+            $factura->total = $factura->detalles->sum(function ($detalle) {
+                return ($detalle->precio ?? 0) * ($detalle->cantidad ?? 1);
+            });
         });
     }
 }
