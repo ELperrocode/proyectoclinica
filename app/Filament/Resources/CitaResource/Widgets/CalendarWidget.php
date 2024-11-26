@@ -8,11 +8,13 @@ use App\Models\Doctor;
 use App\Models\Servicio;
 use Filament\Forms;
 use App\Filament\Resources\CitaResource;
+use Filament\Forms\Components\TextInput;
 use Saade\FilamentFullCalendar\Widgets\FullCalendarWidget;
 use Saade\FilamentFullCalendar\Data\EventData;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
 use Illuminate\Database\Eloquent\Model;
+use Livewire\Attributes\Reactive;
 use Saade\FilamentFullCalendar\Actions\CreateAction;
 use Saade\FilamentFullCalendar\Actions\EditAction;
 use Saade\FilamentFullCalendar\Actions\DeleteAction;
@@ -30,7 +32,7 @@ class CalendarWidget extends FullCalendarWidget
             ->map(
                 fn(Cita $event) => EventData::make()
                     ->id($event->id)
-                    ->title($event->paciente->nombre." ".$event->paciente->apellido." - ".$event->motivo->nombre)
+                    ->title($event->paciente->nombre . " " . $event->paciente->apellido . " - " . $event->motivo->nombre)
                     ->start($event->fecha . 'T' . $event->hora_inicio)
                     ->end($event->fecha . 'T' . $event->hora_fin)
                     ->backgroundColor($this->getEventColor($event->status))
@@ -45,7 +47,7 @@ class CalendarWidget extends FullCalendarWidget
             'confirmada' => 'primary',
             'cancelada' => 'red',
             'completada' => 'success',
-            default => 'blue',
+            default => 'red',
         };
     }
 
@@ -57,7 +59,11 @@ class CalendarWidget extends FullCalendarWidget
                 ->options(Paciente::all()->mapWithKeys(function ($paciente) {
                     return [$paciente->id => $paciente->nombre . ' ' . $paciente->apellido . ' (CIP: ' . $paciente->cip . ')'];
                 }))
-                ->required(),
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function (callable $get, callable $set) {
+                    $this->validateAvailability($get, $set);
+                }),
 
             Forms\Components\Select::make('motivo_id')
                 ->label('Motivo')
@@ -68,6 +74,9 @@ class CalendarWidget extends FullCalendarWidget
                     $especialidadId = Servicio::find($state)?->especialidad_id;
                     $set('doctor_id', null);
                     $set('especialidad_id', $especialidadId);
+                })
+                ->afterStateUpdated(function (callable $get, callable $set) {
+                    $this->validateAvailability($get, $set);
                 }),
 
             Forms\Components\Select::make('doctor_id')
@@ -79,31 +88,160 @@ class CalendarWidget extends FullCalendarWidget
                             return [$doctor->id => $doctor->nombre . ' ' . $doctor->apellido . ' (CIP: ' . $doctor->cip . ')'];
                         });
                 })
-                ->required(),
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function (callable $get, callable $set) {
+                    $this->validateAvailability($get, $set);
+                }),
 
             Forms\Components\DatePicker::make('fecha')
                 ->label('Fecha')
                 ->required()
-                ->minDate(now()->toDateString()),
+                ->minDate(now()->toDateString())
+                ->reactive()
+                ->afterStateUpdated(function (callable $get, callable $set) {
+                    $this->validateAvailability($get, $set);
+                }),
 
             Forms\Components\Grid::make()
                 ->schema([
                     Forms\Components\TimePicker::make('hora_inicio')
                         ->seconds(false)
-                        ->required(),
+                        ->required()
+                        ->reactive()
+                        ->afterStateUpdated(function (callable $get, callable $set) {
+                            $horaInicio = $get('hora_inicio');
+                            $horaFin = $get('hora_fin');
+
+                            if ($horaFin && $horaInicio > $horaFin) {
+                                $set('hora_fin', null);
+                                Notification::make()
+                                    ->title('Error')
+                                    ->danger()
+                                    ->body('La hora de finalización no puede ser menor que la hora de inicio.')
+                                    ->send();
+                            }
+                        }),
 
                     Forms\Components\TimePicker::make('hora_fin')
                         ->seconds(false)
-                        ->required(),
+                        ->required()
+                        ->reactive()
+                        ->afterStateUpdated(function (callable $get, callable $set) {
+                            $horaInicio = $get('hora_inicio');
+                            $horaFin = $get('hora_fin');
+
+                            if ($horaInicio && $horaFin < $horaInicio) {
+                                $set('hora_fin', null);
+                                Notification::make()
+                                    ->title('Error')
+                                    ->danger()
+                                    ->body('La hora de finalización no puede ser menor que la hora de inicio.')
+                                    ->send();
+                            }
+                        }),
                 ]),
+
+            Forms\Components\Placeholder::make('error')
+                ->label('Error')
+                ->visible(fn(callable $get) => $get('error') !== null)
+                ->content(fn(callable $get) => $get('error')),
+            Forms\Components\Placeholder::make('log_message')
+                ->label('Log Message')
+                ->visible(fn(callable $get) => $get('log_message') !== null)
+                ->content(fn(callable $get) => $get('log_message')),
         ];
     }
 
+    protected function validateAvailability(callable $get, callable $set)
+    {
+        $doctorId = $get('doctor_id');
+        $fecha = $get('fecha');
+        $horaInicio = $get('hora_inicio');
+        $horaFin = $get('hora_fin');
+        error_log("Doctor ID: $doctorId, Fecha: $fecha, Hora Inicio: $horaInicio, Hora Fin: $horaFin");
+        $set('log_message', "Doctor ID: $doctorId, Fecha: $fecha, Hora Inicio: $horaInicio, Hora Fin: $horaFin");
+
+        if ($doctorId && $fecha && $horaInicio && $horaFin) {
+            try {
+                $sqlQuery = (new Cita())->validarDisponibilidad([
+                    'doctor_id' => $doctorId,
+                    'fecha' => $fecha,
+                    'hora_inicio' => $horaInicio,
+                    'hora_fin' => $horaFin,
+                ]);
+                $set('error', null);
+                $set('sql_query', $sqlQuery);
+            } catch (\Exception $e) {
+                $set('error', $e->getMessage());
+                $set('sql_query', null);
+            }
+        }
+    }
+
+
+    protected function headerActions(): array
+    {
+        return [
+            CreateAction::make()
+                ->using(function (array $data) {
+                    // Validar disponibilidad usando el modelo
+                    $cita = new Cita();
+
+                    if ($cita->isValid($data)) {
+                        // Crear la cita si no hay conflictos
+                        Cita::create($data);
+
+                        Notification::make()
+                            ->title('Cita creada exitosamente')
+                            ->success()
+                            ->send();
+                    } else {
+                        Notification::make()
+                            ->title('Error al crear la cita')
+                            ->danger()
+                            ->body('No se puede crear la cita debido a conflictos.')
+                            ->send();
+                    }
+                })
+                ->mountUsing(function (Forms\ComponentContainer $form, array $arguments) {
+                    $form->fill([
+                        'paciente_id' => null,
+                        'doctor_id' => null,
+                        'motivo_id' => null,
+                        'especialidad_id' => null,
+                        'fecha' => $arguments['start'] ?? null,
+                        'hora_inicio' => $arguments['start'] ? Carbon::parse($arguments['start'])->format('H:i') : null,
+                        'hora_fin' => $arguments['end'] ? Carbon::parse($arguments['end'])->format('H:i') : null,
+                    ]);
+                }),
+        ];
+    }
 
     protected function modalActions(): array
     {
         return [
             EditAction::make()
+                ->using(function (Cita $record, array $data) {
+                    try {
+                        // Validar disponibilidad usando el modelo
+                        $record->validarDisponibilidad($data);
+
+                        // Actualizar la cita si no hay conflictos
+                        $record->update($data);
+
+                        Notification::make()
+                            ->title('Cita actualizada exitosamente')
+                            ->success()
+                            ->send();
+                    } catch (\Exception $e) {
+                        Notification::make()
+                            ->title('Error al actualizar la cita')
+                            ->danger()
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                })
                 ->mountUsing(function (Cita $record, Forms\ComponentContainer $form, array $arguments) {
                     $especialidadId = Servicio::find($record->motivo_id)?->especialidad_id;
                     $form->fill([
@@ -117,24 +255,6 @@ class CalendarWidget extends FullCalendarWidget
                     ]);
                 }),
             DeleteAction::make(),
-        ];
-    }
-
-    protected function headerActions(): array
-    {
-        return [
-            CreateAction::make()
-                ->mountUsing(function (Forms\ComponentContainer $form, array $arguments) {
-                    $form->fill([
-                        'paciente_id' => null,
-                        'doctor_id' => null,
-                        'motivo_id' => null,
-                        'especialidad_id' => null,
-                        'fecha' => $arguments['start'] ?? null,
-                        'hora_inicio' => $arguments['start'] ? Carbon::parse($arguments['start'])->format('H:i') : null,
-                        'hora_fin' => $arguments['end'] ? Carbon::parse($arguments['end'])->format('H:i') : null,
-                    ]);
-                }),
         ];
     }
 
