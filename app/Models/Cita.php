@@ -136,7 +136,7 @@ class Cita extends Model
             ]);
         }
     }
-
+ 
     /**
      * Método de validación principal.
      */

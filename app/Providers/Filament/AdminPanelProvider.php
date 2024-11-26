@@ -22,6 +22,7 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Hexters\HexaLite\HexaLite;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin as Shield;
+use Rupadana\ApiService\ApiServicePlugin;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -60,8 +61,12 @@ class AdminPanelProvider extends PanelProvider
             ->navigationItems([
             ])
             ->plugins([
-                Shield::make()
+                Shield::make(),
+
             ])
+            ->plugin(
+                ApiServicePlugin::make(),
+            )
             ->plugin(
                 FilamentFullCalendarPlugin::make()
                     ->schedulerLicenseKey("")
