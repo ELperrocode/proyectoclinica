@@ -23,6 +23,7 @@ use Hexters\HexaLite\HexaLite;
 use Saade\FilamentFullCalendar\FilamentFullCalendarPlugin;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin as Shield;
 use Rupadana\ApiService\ApiServicePlugin;
+use Jeffgreco13\FilamentBreezy\BreezyCore;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -32,7 +33,6 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
             ->profile()
             ->colors([
                 'primary' => Color::Blue,
@@ -58,14 +58,23 @@ class AdminPanelProvider extends PanelProvider
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
             ])
-            ->navigationItems([
-            ])
+            ->navigationItems([])
             ->plugins([
                 Shield::make(),
 
             ])
             ->plugin(
                 ApiServicePlugin::make(),
+            )
+            ->plugin(
+                BreezyCore::make()
+                    ->myProfile(
+                        shouldRegisterUserMenu: true,
+                        shouldRegisterNavigation: true,
+                        navigationGroup: 'Settings',
+                        hasAvatars: false,
+                        slug: 'my-profile'
+                    )
             )
             ->plugin(
                 FilamentFullCalendarPlugin::make()
