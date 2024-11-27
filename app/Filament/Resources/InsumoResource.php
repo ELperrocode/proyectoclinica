@@ -7,6 +7,7 @@ use App\Models\Insumo;
 use Filament\Resources\Resource;
 use Filament\Forms;
 use Filament\Tables;
+use Filament\Notifications\Notification;
 
 class InsumoResource extends Resource
 {
@@ -14,6 +15,16 @@ class InsumoResource extends Resource
 
     protected static ?string $navigationIcon = 'heroicon-o-archive-box';
     protected static ?string $navigationGroup = 'Inventario';
+
+    public static function getNavigationBadge(): ?string
+    {
+        $lowStockCount = Insumo::where('cantidad', '<', 100)->count();
+        return $lowStockCount > 0 ? (string) $lowStockCount : null;
+    }
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'danger';
+    }
 
 
     public static function form(Forms\Form $form): Forms\Form
@@ -37,7 +48,18 @@ class InsumoResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('nombre'),
                 Tables\Columns\TextColumn::make('descripcion')->limit(50),
-                Tables\Columns\TextColumn::make('cantidad'),
+                Tables\Columns\TextColumn::make('cantidad')->sortable()
+                ->badge()
+                ->color(function (string $state): string {
+                    $cantidad = (int) $state;
+                    if ($cantidad > 200) {
+                        return 'success';
+                    } elseif ($cantidad > 50) {
+                        return 'warning';
+                    } else {
+                        return 'danger';
+                    }
+                }),
                 Tables\Columns\TextColumn::make('precio_unitario'),
                 Tables\Columns\TextColumn::make('categoria.nombre')->label('Categoría'),
                 Tables\Columns\TextColumn::make('lote'),
@@ -68,4 +90,5 @@ class InsumoResource extends Resource
             'edit' => Pages\EditInsumo::route('/{record}/edit'),
         ];
     }
+
 }
